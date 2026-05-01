@@ -1,0 +1,54 @@
+// Code your design here
+module apb_slave #(
+    parameter ADDR_WIDTH = 4,
+    parameter DATA_WIDTH = 32
+)(
+    input                   PCLK,
+    input                   PRESETn,
+
+    input  [ADDR_WIDTH-1:0] PADDR,
+    input                   PSEL,
+    input                   PENABLE,
+    input                   PWRITE,
+    input  [DATA_WIDTH-1:0] PWDATA,
+
+    output reg [DATA_WIDTH-1:0] PRDATA,
+    output reg              PREADY,
+    output reg              PSLVERR
+);
+
+    // Internal registers (4 registers)
+    reg [DATA_WIDTH-1:0] mem [0:3];
+
+    integer i;
+
+    // Reset logic
+    always @(negedge PRESETn) begin
+        for (i = 0; i < 4; i = i + 1)
+            mem[i] <= 0;
+    end
+
+    // APB logic
+    always @(posedge PCLK) begin
+        if (!PRESETn) begin
+            PRDATA  <= 0;
+            PREADY  <= 0;
+            PSLVERR <= 0;
+        end else begin
+            PREADY  <= 1;      // always ready
+            PSLVERR <= 0;      // no error
+
+            // ENABLE phase check
+            if (PSEL && PENABLE) begin
+                if (PWRITE) begin
+                    // WRITE operation
+                    mem[PADDR[3:2]] <= PWDATA;
+                end else begin
+                    // READ operation
+                    PRDATA <= mem[PADDR[3:2]];
+                end
+            end
+        end
+    end
+
+endmodule
